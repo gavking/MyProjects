@@ -1,0 +1,133 @@
+<!-- Manually create file
+  In order to use socket.io you must import the socket.io library
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>IO Chat</title>
+    <!-- Latest compiled and minified Boostrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <!-- Import JQuery-->
+    <script
+      src="https://code.jquery.com/jquery-3.1.1.min.js"
+      integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+      crossorigin="anonymous">
+    </script>
+    <!-- Import the socket.io library. I originally had this as a CDN but it was flaky so installed local -->
+    <script src="js/socket.io.min.js"></script>
+    <style>
+      body{
+        margin-top: 30px;
+      }
+      #messageArea{
+        display:none;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div id="userFormArea" class="row">
+      <div class="col-md-12">
+        <form id="userForm">
+          <div class="form-group">
+            <label>Enter Username</label>
+            <input class="form-control" id="username" />
+            <br />
+            <input type="submit" class="btn btn-primary" value="Login" />
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row" id ="messageArea">
+        <div class="col-md-4">
+          <div class="well">
+            <h3>Online Users</h3>
+            <ul class="list-group" id ="users"></ul>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <div class="chat" id="chat"></div>
+          <form id="messageForm">
+            <div class="form-group">
+              <label>Enter Message</label>
+              <textarea class="form-control" id="message"></textarea>
+              <br />
+              <input type="submit" class="btn btn-primary" value="Send Message" />
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      $(function(){
+        /*create the socket object to handle sending and receiving socket
+         message events. Can pass in a URL to connect() which could be an ssl,
+         ie. https URL for security, where you would use:
+         var socket = io.connect('https://localhost:3000');
+        */
+        var socket = io.connect();
+
+        var $messageForm = $('#messageForm');
+        //for grabbing the contents of the textarea from the message form
+        var $message = $('#message');
+        var $chat = $('#chat');
+        var $messageArea = $('#messageArea');
+        var $userFormArea = $('#userFormArea');
+        var $userForm = $('#userForm');
+        var $users = $('#users');
+        var $username = $('#username');
+
+        $messageForm.submit(function(e){
+          e.preventDefault();
+          console.log("Submitted"); //This will output to the Client console i.e. Chrome Dev Tools Console, not the server console        });
+          /*This is the key part of sending the message. Give the message a name
+          in this case 'send message', and append the data, which could be an JSON object itself.
+          In this instance we send the contents of the textarea to the server via the socket*/
+          socket.emit('send message', $message.val());
+          //Clear the contents of the textarea
+          $message.val('');
+        });
+
+        //handle receiving an incoming event of type 'new message' from the server
+        socket.on('new message', function(data){
+          /*add a new div to the div of class "chat" and show the username, which
+          we get from the data passed from the server, which in this instance includes
+          the user who send the chat text */
+          $chat.append('<div class="well"><strong>'+ data.user +'</strong>: ' + data.msg + '</div>');
+        });
+
+        //handle an outgoing event of type 'new user' for when a new user connects
+        $userForm.submit(function(e){
+          e.preventDefault();
+          /*This will output to the Client console i.e. Chrome Dev Tools Console,
+          not the server console */
+          //console.log("Submitted"); //For testing form submittion
+
+          /*Send the username value to the server via the socket,
+          then hide the user form in a callback */
+          socket.emit('new user', $username.val(), function(data){
+            if(data){
+              $userFormArea.hide();
+              $messageArea.show();
+            }
+          });
+          $username.val('');
+        });
+
+        /*Handle a received event of type 'update users' from the server*/
+        socket.on('update users', function(data){
+          var html = '';
+          for(i=0; i<data.length; i++){
+            html += '<li class="list-group-item">'+data[i]+'</li>';
+          };
+          $users.html(html);
+        });
+    });
+    </script>
+
+  </body>
+</html>
